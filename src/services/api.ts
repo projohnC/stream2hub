@@ -177,6 +177,7 @@ function extractArrayFromResponse(data: any): any[] {
 function cleanTitle(title: string): string {
   if (!title) return 'Unknown';
 
+  // If title already has garbage, clean it
   let cleaned = title
     .replace(/How\s+to\s+download/gi, '')
     .replace(/HDhub4u\s+logo/gi, '')
@@ -193,7 +194,20 @@ function cleanTitle(title: string): string {
   // Strip leading/trailing symbols that might be left over
   cleaned = cleaned.replace(/^[\s\[\(\|\-\•]+|[\s\]\)\|\-\•]+$/g, '').trim();
 
-  return cleaned || 'Unknown';
+  // If cleaning resulted in an empty string, return a fallback OR the original title
+  // But preferably we should use the original if it wasn't just symbols
+  if (!cleaned || cleaned.toLowerCase() === 'unknown' || cleaned.toLowerCase().includes('how to download')) {
+    // If it's the specific "How to download" garbage, use the user's preferred text
+    if (title.toLowerCase().includes('how to download')) {
+      return 'Watch and Download Now !';
+    }
+
+    // If original title was mostly letters/numbers, use it instead of "Unknown"
+    const hasAlphanumeric = /[a-z0-9]/i.test(title);
+    return hasAlphanumeric ? title.trim() : 'Watch and Download Now !';
+  }
+
+  return cleaned;
 }
 
 // Map HDHub4U movie to our Movie type

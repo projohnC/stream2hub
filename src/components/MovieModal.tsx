@@ -7,12 +7,14 @@ interface MovieModalProps {
   movie: Movie | null;
   isOpen: boolean;
   onClose: () => void;
+  onShowToast: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 export const MovieModal: React.FC<MovieModalProps> = ({
   movie,
   isOpen,
-  onClose
+  onClose,
+  onShowToast
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentLinkIndex, setCurrentLinkIndex] = useState(0);
@@ -168,14 +170,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
     }
   };
 
-  // Try next link
-  const tryNextLink = () => {
-    if (currentLinkIndex < validLinks.length - 1) {
-      setCurrentLinkIndex(prev => prev + 1);
-      setIsPlaying(false);
-      setPlayerUrl(null);
-    }
-  };
+
 
   return (
     <div className="modal-overlay active" onClick={onClose}>
@@ -225,6 +220,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                   onError={() => {
                     console.error('Video element error');
                     setIsBuffering(false);
+                    onShowToast('Server error: Please choose another server from the list below.', 'error');
                   }}
                   // Only apply crossOrigin if it's an HLS stream, otherwise it can block direct CDN links
                   crossOrigin={playerUrl?.includes('.m3u8') ? "anonymous" : undefined}
@@ -260,18 +256,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                 ))}
               </div>
 
-              <div className="player-controls-bar">
-                <span className="player-hint flex items-center gap-2 text-sm text-gray-400">
-                  <Monitor size={16} className="text-blue-400" />
-                  Built-in HLS Player
-                </span>
-                {currentLinkIndex < validLinks.length - 1 && (
-                  <button className="next-link-btn" onClick={tryNextLink}>
-                    <SkipForward size={16} />
-                    Try Next Link
-                  </button>
-                )}
-              </div>
+
             </div>
           )}
 
@@ -316,7 +301,12 @@ export const MovieModal: React.FC<MovieModalProps> = ({
               Download Links
             </h3>
 
-            {validLinks.length > 0 ? (
+            {(!movie.downloads || movie.downloads.length === 0) ? (
+              <div className="download-loading">
+                <div className="spinner"></div>
+                <p>Please wait Loading movies...</p>
+              </div>
+            ) : validLinks.length > 0 ? (
               <div className="download-grid">
                 {validLinks.map((link, index) => (
                   <div
@@ -324,8 +314,10 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                     className={`download-item ${index === currentLinkIndex ? 'active' : ''}`}
                     onClick={() => {
                       setCurrentLinkIndex(index);
-                      setIsPlaying(false);
-                      setPlayerUrl(null);
+                      // If the player is already showing, just change the source to prevent closing the player
+                      if (isPlaying) {
+                        setPlayerUrl(link.url);
+                      }
                     }}
                   >
                     <div className="download-info">
@@ -339,7 +331,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                       {/Android/i.test(navigator.userAgent) && (
                         <div className="player-badges">
                           <button
-                            className="btn btn-vlc"
+                            className="btn btn-vlc btn-orange"
                             title="Play in VLC"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -349,7 +341,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                             VLC
                           </button>
                           <button
-                            className="btn btn-vlc"
+                            className="btn btn-mx"
                             title="Play in MX Player"
                             onClick={(e) => {
                               e.stopPropagation();

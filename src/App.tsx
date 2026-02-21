@@ -221,6 +221,7 @@ function App() {
         movie={selectedMovie}
         isOpen={isModalOpen}
         onClose={handleModalClose}
+        onShowToast={showToast}
       />
 
       {/* Toast Container */}

@@ -90,7 +90,20 @@ export function useMovies(): UseMoviesReturn {
 
   const loadMovieDetails = useCallback(async (movie: Movie): Promise<Movie | null> => {
     try {
-      return await fetchHDHub4UDetails(movie.url);
+      const details = await fetchHDHub4UDetails(movie.url);
+      if (!details) return null;
+
+      // Merge listing data with details, but prioritize listing data for title/id
+      // to ensure consistency and prevent "Unknown" titles
+      return {
+        ...details,
+        id: movie.id, // Keep the same ID
+        title: (details.title && details.title !== 'Unknown') ? details.title : movie.title,
+        thumb: (details.thumb && !details.thumb.includes('placeholder')) ? details.thumb : movie.thumb,
+        year: (details.year && details.year !== '2024') ? details.year : movie.year,
+        rating: (details.rating && details.rating !== 'N/A') ? details.rating : movie.rating,
+        genre: (details.genre && details.genre !== 'Movie') ? details.genre : movie.genre
+      };
     } catch (err) {
       console.error('Error loading movie details:', err);
       return null;
