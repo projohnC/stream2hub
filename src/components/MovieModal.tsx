@@ -1,28 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Play, Download, ExternalLink, Monitor, Volume2, SkipForward, Loader2 } from 'lucide-react';
-import { isDirectVideoUrl } from '@/services/api';
-import type { Movie, DownloadLink } from '@/types';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { X, Play, Download, Monitor, SkipForward, Loader2 } from 'lucide-react';
+import Hls from 'hls.js';
+import type { Movie } from '@/types';
 
 interface MovieModalProps {
   movie: Movie | null;
   isOpen: boolean;
   onClose: () => void;
-  onResolveMagicLink: (url: string) => Promise<string | null>;
 }
 
 export const MovieModal: React.FC<MovieModalProps> = ({
   movie,
   isOpen,
-  onClose,
-  onResolveMagicLink
+  onClose
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentLinkIndex, setCurrentLinkIndex] = useState(0);
-  const [resolvedLinks, setResolvedLinks] = useState<Map<string, string>>(new Map());
-  const [resolvingUrls, setResolvingUrls] = useState<Set<string>>(new Set());
   const [playerUrl, setPlayerUrl] = useState<string | null>(null);
+  const [isBuffering, setIsBuffering] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -30,6 +27,10 @@ export const MovieModal: React.FC<MovieModalProps> = ({
       setIsPlaying(false);
       setCurrentLinkIndex(0);
       setPlayerUrl(null);
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
       if (videoRef.current) {
         videoRef.current.pause();
         videoRef.current.src = '';
@@ -54,66 +55,116 @@ export const MovieModal: React.FC<MovieModalProps> = ({
     };
   }, [isOpen, onClose]);
 
+  const initPlayer = useCallback((url: string) => {
+    if (!videoRef.current) return;
+
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (url.includes('.m3u8')) {
+      if (Hls.isSupported()) {
+        console.log('Initializing HLS.js for:', url);
+        const hls = new Hls({
+          capLevelToPlayerSize: true,
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90
+        });
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.error('Fatal network error encountered, trying to recover...');
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.error('Fatal media error encountered, trying to recover...');
+                hls.recoverMediaError();
+                break;
+              default:
+                console.error('Fatal error, cannot recover:', data.type);
+                hls.destroy();
+                setIsPlaying(false);
+                break;
+            }
+          }
+        });
+
+        hls.attachMedia(videoRef.current);
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+          hls.loadSource(url);
+        });
+
+        hlsRef.current = hls;
+      } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        console.log('Using native HLS support for:', url);
+        videoRef.current.src = url;
+      }
+    } else {
+      console.log('Loading direct video source:', url);
+      videoRef.current.src = url;
+    }
+
+    const playPromise = videoRef.current.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((error: Error) => {
+        console.error('Auto-play failed or was interrupted:', error);
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.play().catch((e: Error) => console.error('Play with mute also failed:', e));
+        }
+      });
+    }
+  }, []);
+
+  // Handle player initialization
+  useEffect(() => {
+    if (isOpen && movie && isPlaying && playerUrl && videoRef.current) {
+      initPlayer(playerUrl);
+    }
+  }, [isOpen, movie, isPlaying, playerUrl, initPlayer]);
+
   if (!isOpen || !movie) return null;
 
-  // Filter valid download links
-  const validLinks = movie.downloads.filter(link => {
-    const url = link.url || '';
-    return url && !url.includes('gadgetsweb.xyz') && !url.includes('cryptonewz');
-  });
+  const validLinks = movie.downloads;
 
-  // Resolve magic link for KMMovies
-  const resolveLink = async (link: DownloadLink): Promise<string> => {
-    if (!link.isMagicLink) return link.url;
-
-    if (resolvedLinks.has(link.url)) {
-      return resolvedLinks.get(link.url)!;
-    }
-
-    setResolvingUrls(prev => new Set(prev).add(link.url));
-    const resolved = await onResolveMagicLink(link.url);
-    setResolvingUrls(prev => {
-      const next = new Set(prev);
-      next.delete(link.url);
-      return next;
-    });
-
-    if (resolved) {
-      setResolvedLinks(prev => new Map(prev).set(link.url, resolved));
-      return resolved;
-    }
-
-    return link.url;
+  const watchOnline = () => {
+    if (validLinks.length === 0) return;
+    const link = validLinks[currentLinkIndex];
+    setPlayerUrl(link.url);
+    setIsPlaying(true);
   };
 
-  // Watch Online - Open in StreamingHub
-  const watchOnline = async () => {
+  const playExternal = (player: 'vlc' | 'mx' | 'other' = 'vlc', index?: number) => {
     if (validLinks.length === 0) return;
+    const targetIndex = typeof index === 'number' ? index : currentLinkIndex;
+    const url = validLinks[targetIndex].url;
+    const isAndroid = /Android/i.test(navigator.userAgent);
 
-    const link = validLinks[currentLinkIndex];
-    const url = await resolveLink(link);
-
-    if (isDirectVideoUrl(url)) {
-      // Open in StreamingHub iframe
-      const streamingHubUrl = `https://streaminghub.42web.io/?i=1&url=${encodeURIComponent(url)}`;
-      setPlayerUrl(streamingHubUrl);
-      setIsPlaying(true);
+    if (isAndroid) {
+      let intent = '';
+      if (player === 'vlc') {
+        intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=org.videolan.vlc;end`;
+      } else if (player === 'mx') {
+        intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;end`;
+      } else {
+        intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;end`;
+      }
+      window.location.href = intent;
     } else {
-      // Fallback to direct URL
-      setPlayerUrl(url);
-      setIsPlaying(true);
+      // Desktop - vlc:// protocol needs special care for encoded URLs
+      // Avoid browser normalizing the double slash into one
+      const vlcUrl = url.replace('https://', 'https/').replace('http://', 'http/');
+      window.location.href = `vlc://${vlcUrl}`;
     }
-  };
 
-  // Play in StreamingHub (new tab)
-  const playInStreamingHub = async () => {
-    if (validLinks.length === 0) return;
-
-    const link = validLinks[currentLinkIndex];
-    const url = await resolveLink(link);
-
-    const streamingHubUrl = `https://streaminghub.42web.io/?i=1&url=${encodeURIComponent(url)}`;
-    window.open(streamingHubUrl, '_blank');
+    // Fallback if intent/protocol fails
+    setTimeout(() => {
+      window.open(url, '_blank');
+    }, 2000);
   };
 
   // Try next link
@@ -123,16 +174,6 @@ export const MovieModal: React.FC<MovieModalProps> = ({
       setIsPlaying(false);
       setPlayerUrl(null);
     }
-  };
-
-  // Helper to normalize and check for cooldown links
-  const getCooldownUrl = (url: string): string | null => {
-    if (!url) return null;
-    const lowerUrl = url.toLowerCase();
-    if (lowerUrl.includes('hub.cooldown.buzz') || lowerUrl.includes('cooldown.buzz')) {
-      return url;
-    }
-    return null;
   };
 
   return (
@@ -160,7 +201,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
             <span className="meta-rating">IMDb: {movie.rating}</span>
             <span className="meta-year">{movie.year}</span>
             <span className="meta-genre">{movie.genre}</span>
-            <span className="meta-source">{movie.source === 'hdhub4u' ? 'HDHub4U' : 'KMMovies'}</span>
+            <span className="meta-source">HDHub4U</span>
           </div>
 
           <p className="modal-desc">
@@ -170,18 +211,58 @@ export const MovieModal: React.FC<MovieModalProps> = ({
           {/* Player Section */}
           {isPlaying && playerUrl && (
             <div className="player-section active">
-              <div className="video-container">
-                <iframe
-                  ref={iframeRef}
-                  src={playerUrl}
-                  allowFullScreen
-                  sandbox="allow-scripts allow-same-origin allow-presentation"
+              <div className="video-container bg-black rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10">
+                <video
+                  ref={videoRef}
+                  controls
+                  playsInline
+                  autoPlay
+                  className="w-full h-full aspect-video"
+                  onWaiting={() => setIsBuffering(true)}
+                  onPlaying={() => setIsBuffering(false)}
+                  onCanPlay={() => setIsBuffering(false)}
+                  onError={() => {
+                    console.error('Video element error');
+                    setIsBuffering(false);
+                  }}
+                  // Only apply crossOrigin if it's an HLS stream, otherwise it can block direct CDN links
+                  crossOrigin={playerUrl?.includes('.m3u8') ? "anonymous" : undefined}
                 />
+                {isBuffering && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                  </div>
+                )}
               </div>
+
+              {/* Server Selection */}
+              <div className="server-selector">
+                <button
+                  className="server-btn"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'white' }}
+                  onClick={() => playerUrl && initPlayer(playerUrl)}
+                >
+                  <SkipForward size={14} className="rotate-180" />
+                  Reload Player
+                </button>
+                {validLinks.map((link, idx) => (
+                  <button
+                    key={idx}
+                    className={`server-btn ${idx === currentLinkIndex ? 'active' : ''}`}
+                    onClick={() => {
+                      setCurrentLinkIndex(idx);
+                      setPlayerUrl(link.url);
+                    }}
+                  >
+                    Server {idx + 1} ({link.quality || 'HD'})
+                  </button>
+                ))}
+              </div>
+
               <div className="player-controls-bar">
-                <span className="player-hint">
-                  <Monitor size={16} />
-                  Streaming via StreamingHub
+                <span className="player-hint flex items-center gap-2 text-sm text-gray-400">
+                  <Monitor size={16} className="text-blue-400" />
+                  Built-in HLS Player
                 </span>
                 {currentLinkIndex < validLinks.length - 1 && (
                   <button className="next-link-btn" onClick={tryNextLink}>
@@ -198,38 +279,33 @@ export const MovieModal: React.FC<MovieModalProps> = ({
             <button
               className="btn btn-primary btn-large"
               onClick={watchOnline}
-              disabled={validLinks.length === 0 || resolvingUrls.has(validLinks[currentLinkIndex]?.url)}
+              disabled={validLinks.length === 0}
             >
-              {resolvingUrls.has(validLinks[currentLinkIndex]?.url) ? (
-                <Loader2 size={20} className="spin" />
-              ) : (
-                <Play size={20} fill="white" />
-              )}
+              <Play size={20} fill="white" />
               Watch Online
             </button>
 
-            <button
-              className="btn btn-secondary"
-              onClick={playInStreamingHub}
-              disabled={validLinks.length === 0 || resolvingUrls.has(validLinks[currentLinkIndex]?.url)}
-            >
-              <ExternalLink size={18} />
-              Play in StreamingHub
-            </button>
-
-            {/* Cooldown Buzz direct button if detected */}
-            {validLinks[currentLinkIndex] && getCooldownUrl(resolvedLinks.get(validLinks[currentLinkIndex].url) || validLinks[currentLinkIndex].url) && (
+            <div className="external-players-group">
               <button
-                className="btn btn-secondary border-blue-500/50 hover:bg-blue-500/10"
-                onClick={async () => {
-                  const url = await resolveLink(validLinks[currentLinkIndex]);
-                  window.open(url, '_blank');
-                }}
+                className="btn btn-secondary"
+                onClick={() => playExternal('vlc')}
+                disabled={validLinks.length === 0}
               >
-                <ExternalLink size={18} className="text-blue-400" />
-                Open Cooldown Direct
+                <Monitor size={18} />
+                {/Android/i.test(navigator.userAgent) ? 'VLC' : 'Open in VLC'}
               </button>
-            )}
+
+              {/Android/i.test(navigator.userAgent) && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => playExternal('mx')}
+                  disabled={validLinks.length === 0}
+                >
+                  <Monitor size={18} />
+                  MX Player
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Download Section */}
@@ -259,33 +335,37 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                     </div>
 
                     <div className="download-actions">
-                      <button
-                        className="btn btn-vlc"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const url = await resolveLink(link);
-                          if (isDirectVideoUrl(url)) {
-                            // Android VLC Intent
-                            const vlcIntent = `intent:${url}#Intent;package=org.videolan.vlc;scheme=https;end`;
-                            window.location.href = vlcIntent;
-                          } else {
-                            alert('This link cannot be opened in VLC.');
-                          }
-                        }}
-                        disabled={resolvingUrls.has(link.url)}
-                        title="Play with VLC"
-                      >
-                        <Volume2 size={16} />
-                        VLC
-                      </button>
-
+                      <div className="player-badges">
+                        <button
+                          className="btn btn-vlc"
+                          title="Play in VLC"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playExternal('vlc', index);
+                          }}
+                        >
+                          VLC
+                        </button>
+                        {/Android/i.test(navigator.userAgent) && (
+                          <button
+                            className="btn btn-vlc"
+                            title="Play in MX Player"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playExternal('mx', index);
+                            }}
+                          >
+                            MX
+                          </button>
+                        )}
+                      </div>
                       <button
                         className="btn btn-download"
-                        onClick={async (e) => {
+                        onClick={(e) => {
                           e.stopPropagation();
-                          const url = await resolveLink(link);
+                          setCurrentLinkIndex(index);
                           const a = document.createElement('a');
-                          a.href = url;
+                          a.href = link.url;
                           a.download = `${movie.title}_${link.quality || 'HD'}.mp4`;
                           a.target = '_blank';
                           a.rel = 'noopener noreferrer';
@@ -293,13 +373,8 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                           a.click();
                           document.body.removeChild(a);
                         }}
-                        disabled={resolvingUrls.has(link.url)}
                       >
-                        {resolvingUrls.has(link.url) ? (
-                          <Loader2 size={16} className="spin" />
-                        ) : (
-                          <Download size={16} />
-                        )}
+                        <Download size={16} />
                         Download
                       </button>
                     </div>

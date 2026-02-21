@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { Hero } from '@/components/Hero';
-import { CategorySection } from '@/components/CategorySection';
+import { MovieCard } from '@/components/MovieCard';
 import { MovieModal } from '@/components/MovieModal';
 import { WatchLaterView } from '@/components/WatchLaterView';
 import { ToastContainer } from '@/components/Toast';
 import { PageLoader } from '@/components/Loader';
-import { ShimmerHero, ShimmerRow } from '@/components/Shimmer';
+import { ShimmerRow } from '@/components/Shimmer';
 import { useMovies } from '@/hooks/useMovies';
 import { useWatchLater } from '@/hooks/useWatchLater';
 import { useToast } from '@/hooks/useToast';
@@ -17,28 +16,28 @@ function App() {
   const [currentView, setCurrentView] = useState<'home' | 'watchlater'>('home');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  const { 
-    movies, 
-    loading, 
-    page, 
-    hasMore, 
-    loadMovies, 
-    searchMovies, 
+
+  const {
+    movies,
+    loading,
+    error,
+    page,
+    hasMore,
+    loadMovies,
+    searchMovies,
     loadMovieDetails,
-    resolveKMLink,
-    changePage 
+    changePage
   } = useMovies();
-  
-  const { 
-    watchLater, 
-    count, 
-    toggleWatchLater, 
+
+  const {
+    watchLater,
+    count,
+    toggleWatchLater,
     isInWatchLater,
     removeFromWatchLater,
-    clearWatchLater 
+    clearWatchLater
   } = useWatchLater();
-  
+
   const { toasts, showToast, removeToast } = useToast();
 
   // Load movies on mount
@@ -50,7 +49,7 @@ function App() {
   const handleMovieClick = useCallback(async (movie: Movie) => {
     setSelectedMovie(movie);
     setIsModalOpen(true);
-    
+
     // Load fresh details
     const details = await loadMovieDetails(movie);
     if (details) {
@@ -82,7 +81,7 @@ function App() {
       downloads: [],
       source: item.source
     };
-    
+
     handleMovieClick(movie);
   }, [handleMovieClick]);
 
@@ -104,115 +103,99 @@ function App() {
     setSelectedMovie(null);
   }, []);
 
-  // Featured movie for hero (first trending movie)
-  const featuredMovie = movies.trending[0] || null;
+  // Helper for pagination numbers
+  const renderPagination = () => {
+    if (!hasMore && page === 1) return null;
+
+    const maxPagesToShow = 5;
+    let startPage = Math.max(1, page - 2);
+    let endPage = startPage + maxPagesToShow - 1;
+
+    if (endPage > 100) { // Arbitrary high limit for UI
+      endPage = 100;
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    return (
+      <div className="pagination-container">
+        <button
+          className="page-nav-btn"
+          onClick={() => changePage(-1)}
+          disabled={page === 1}
+        >
+          Previous
+        </button>
+
+        <div className="page-numbers">
+          {Array.from({ length: 5 }, (_, i) => startPage + i).map(p => (
+            <button
+              key={p}
+              className={`page-num-btn ${page === p ? 'active' : ''}`}
+              onClick={() => {
+                const diff = p - page;
+                if (diff !== 0) changePage(diff);
+              }}
+            >
+              {p}
+            </button>
+          ))}
+          <span className="page-dots">...</span>
+        </div>
+
+        <button
+          className="page-nav-btn"
+          onClick={() => changePage(1)}
+          disabled={!hasMore}
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
 
   return (
     <div className="app">
-      <Navbar 
+      <Navbar
         currentView={currentView}
         onViewChange={handleViewChange}
         onSearch={handleSearch}
         watchLaterCount={count}
       />
-      
+
       <main className="main-content">
         {currentView === 'home' ? (
           <div className="home-view">
-            {/* Hero Section */}
-            {loading && !movies.hdhub4u.length ? (
-              <ShimmerHero />
-            ) : featuredMovie ? (
-              <Hero 
-                movie={featuredMovie}
-                isInWatchLater={isInWatchLater(featuredMovie.url)}
-                onWatchNow={() => handleMovieClick(featuredMovie)}
-                onToggleWatchLater={() => handleToggleWatchLater(featuredMovie)}
-                onMoreInfo={() => handleMovieClick(featuredMovie)}
-              />
-            ) : null}
-            
-            {/* Category Sections */}
-            <div className="categories-container">
-              {loading && !movies.hdhub4u.length ? (
-                <>
-                  <div className="section-title-shimmer"></div>
-                  <ShimmerRow count={6} />
-                  <div className="section-title-shimmer"></div>
-                  <ShimmerRow count={6} />
-                </>
-              ) : (
-                <>
-                  <CategorySection
-                    id="trending"
-                    title="🔥 Trending Now"
-                    icon="trending"
-                    movies={movies.trending}
-                    isInWatchLater={isInWatchLater}
-                    onMovieClick={handleMovieClick}
-                    onToggleWatchLater={handleToggleWatchLater}
-                  />
-                  
-                  <CategorySection
-                    id="hdhub"
-                    title="🎬 HDHub4U Movies"
-                    icon="hdhub"
-                    movies={movies.hdhub4u}
-                    isInWatchLater={isInWatchLater}
-                    onMovieClick={handleMovieClick}
-                    onToggleWatchLater={handleToggleWatchLater}
-                  />
-                  
-                  <CategorySection
-                    id="kmmovies"
-                    title="📦 KMMovies"
-                    icon="kmmovies"
-                    movies={movies.kmmovies}
-                    isInWatchLater={isInWatchLater}
-                    onMovieClick={handleMovieClick}
-                    onToggleWatchLater={handleToggleWatchLater}
-                  />
-                  
-                  <CategorySection
-                    id="latest"
-                    title="⭐ Latest Added"
-                    icon="latest"
-                    movies={movies.latest}
-                    isInWatchLater={isInWatchLater}
-                    onMovieClick={handleMovieClick}
-                    onToggleWatchLater={handleToggleWatchLater}
-                  />
-                  
-                  <CategorySection
-                    id="quality"
-                    title="💎 1080p Collection"
-                    icon="quality"
-                    movies={movies.highQuality}
-                    isInWatchLater={isInWatchLater}
-                    onMovieClick={handleMovieClick}
-                    onToggleWatchLater={handleToggleWatchLater}
-                  />
-                </>
-              )}
-            </div>
-            
-            {/* Pagination */}
-            {!loading && hasMore && (
-              <div className="pagination">
-                <button 
-                  className="page-btn"
-                  onClick={() => changePage(-1)}
-                  disabled={page === 1}
-                >
-                  Previous
-                </button>
-                <span className="page-info">Page {page}</span>
-                <button 
-                  className="page-btn"
-                  onClick={() => changePage(1)}
-                >
-                  Next
-                </button>
+            <header className="view-header">
+              <h1 className="view-title">HDHub4U Movies</h1>
+              <p className="view-subtitle">Browse through the latest high-quality movies</p>
+            </header>
+
+            {loading && !movies.length ? (
+              <div className="loading-grid">
+                <ShimmerRow count={12} />
+              </div>
+            ) : error ? (
+              <div className="error-container">
+                <p>{error}</p>
+                <button className="btn btn-primary" onClick={() => loadMovies(1)}>Try Again</button>
+              </div>
+            ) : (
+              <div className="movies-grid-container">
+                <div className="movies-grid">
+                  {movies.map((movie) => (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      isInWatchLater={isInWatchLater(movie.url)}
+                      onClick={() => handleMovieClick(movie)}
+                      onToggleWatchLater={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleToggleWatchLater(movie);
+                      }}
+                    />
+                  ))}
+                </div>
+                {renderPagination()}
               </div>
             )}
           </div>
@@ -232,20 +215,19 @@ function App() {
           />
         )}
       </main>
-      
+
       {/* Movie Modal */}
       <MovieModal
         movie={selectedMovie}
         isOpen={isModalOpen}
         onClose={handleModalClose}
-        onResolveMagicLink={resolveKMLink}
       />
-      
+
       {/* Toast Container */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      
+
       {/* Full Page Loader */}
-      <PageLoader visible={loading && !movies.hdhub4u.length && currentView === 'home'} />
+      <PageLoader visible={loading && !movies.length && currentView === 'home'} />
     </div>
   );
 }

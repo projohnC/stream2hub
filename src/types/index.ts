@@ -10,7 +10,7 @@ export interface Movie {
   genre: string;
   desc: string;
   downloads: DownloadLink[];
-  source: 'hdhub4u' | 'kmmovies';
+  source: 'hdhub4u';
   quality?: string;
   badge?: string;
 }
@@ -24,12 +24,7 @@ export interface DownloadLink {
   resolvedUrl?: string;
 }
 
-export interface MagicLinkResponse {
-  downloadLinks: {
-    label: string;
-    url: string;
-  }[];
-}
+
 
 export interface CategorySection {
   id: string;
@@ -44,7 +39,7 @@ export interface WatchLaterItem {
   thumb: string;
   year: string;
   rating: string;
-  source: 'hdhub4u' | 'kmmovies';
+  source: 'hdhub4u';
 }
 
 export interface APIResponse<T> {
@@ -77,26 +72,4 @@ export interface HDHub4UMovie {
   links?: DownloadLink[];
 }
 
-export interface KMMoviesMovie {
-  title?: string;
-  name?: string;
-  imageUrl?: string;
-  image?: string;
-  poster?: string;
-  url?: string;
-  link?: string;
-  movieInfo?: {
-    releaseDate?: string;
-    imdbRating?: string;
-    genres?: string;
-  };
-  releaseDate?: string;
-  year?: string;
-  imdbRating?: string;
-  genres?: string;
-  storyline?: string;
-  description?: string;
-  plot?: string;
-  downloadLinks?: DownloadLink[];
-  links?: DownloadLink[];
-}
+

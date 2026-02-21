@@ -1,5 +1,5 @@
 // API Service with caching, timeout, and parallel fetching
-import type { Movie, DownloadLink, HDHub4UMovie, KMMoviesMovie } from '@/types';
+import type { Movie, DownloadLink, HDHub4UMovie } from '@/types';
 
 export type { Movie, DownloadLink } from '@/types';
 
@@ -24,6 +24,7 @@ const CONFIG = {
   // Allowed direct video domains
   allowedDomains: [
     'hub.cooldown.buzz',
+    'hub.oreao-cdn.buzz',
     'cooldown.buzz',
     'r2.dev',
     'pub-',
@@ -174,7 +175,25 @@ function extractArrayFromResponse(data: any): any[] {
 
 // Clean movie title
 function cleanTitle(title: string): string {
-  return title ? title.replace(/How\s+to\s+download/gi, '').trim() : 'Unknown';
+  if (!title) return 'Unknown';
+
+  let cleaned = title
+    .replace(/How\s+to\s+download/gi, '')
+    .replace(/HDhub4u\s+logo/gi, '')
+    .replace(/Download\s+our\s+official\s+Android\s+App/gi, '')
+    .replace(/2024\s*•\s*N\/A/gi, '')
+    .replace(/\bHD\b/gi, '') // Remove standalone "HD"
+    .replace(/\[\s*\]/g, '') // Remove empty brackets
+    .replace(/\(\s*\)/g, '') // Remove empty parentheses
+    .replace(/\[\s*\]/g, '') // Second pass for nested [[ ]]
+    .replace(/\(\s*\)/g, '') // Second pass for nested (( ))
+    .replace(/\s+/g, ' ')   // Collapse spaces
+    .trim();
+
+  // Strip leading/trailing symbols that might be left over
+  cleaned = cleaned.replace(/^[\s\[\(\|\-\•]+|[\s\]\)\|\-\•]+$/g, '').trim();
+
+  return cleaned || 'Unknown';
 }
 
 // Map HDHub4U movie to our Movie type
@@ -194,22 +213,7 @@ function mapHDHub4UMovie(m: HDHub4UMovie, index: number): Movie {
   };
 }
 
-// Map KMMovies movie to our Movie type
-function mapKMMoviesMovie(m: KMMoviesMovie, index: number): Movie {
-  const downloads = m.downloadLinks || m.links || [];
-  return {
-    id: `kmmovies_${index}_${Date.now()}`,
-    title: cleanTitle(m.title || m.name || 'Unknown'),
-    thumb: m.imageUrl || m.image || m.poster || 'https://via.placeholder.com/800x450?text=No+Image',
-    url: m.url || m.link || '#',
-    year: m.movieInfo?.releaseDate || m.releaseDate || m.year || '2024',
-    rating: m.movieInfo?.imdbRating || m.imdbRating || 'N/A',
-    genre: m.movieInfo?.genres || m.genres || 'Movie',
-    desc: m.storyline || m.description || m.plot || '',
-    downloads: downloads.map(d => ({ ...d, isMagicLink: true })),
-    source: 'kmmovies'
-  };
-}
+
 
 // Fetch HDHub4U movies
 export async function fetchHDHub4U(page: number = 1): Promise<Movie[]> {
@@ -270,99 +274,22 @@ export async function fetchHDHub4UDetails(url: string): Promise<Movie | null> {
   }
 }
 
-// Fetch KMMovies
-export async function fetchKMMovies(page: number = 1): Promise<Movie[]> {
-  try {
-    const data = await fetchWithTimeout('/api/kmmovies', `?page=${page}`);
-    const movies = extractArrayFromResponse(data);
-    return movies.map((m: KMMoviesMovie, i: number) => mapKMMoviesMovie(m, i));
-  } catch (err) {
-    console.error('Error fetching KMMovies:', err);
-    return [];
-  }
-}
 
-// Search KMMovies
-export async function searchKMMovies(query: string): Promise<Movie[]> {
-  try {
-    const data = await fetchWithTimeout('/api/kmmovies/search', `?q=${encodeURIComponent(query)}`);
-    const movies = extractArrayFromResponse(data);
-    return movies.map((m: KMMoviesMovie, i: number) => mapKMMoviesMovie(m, i));
-  } catch (error) {
-    console.error('Error searching KMMovies:', error);
-    return [];
-  }
-}
 
-// Fetch KMMovies details
-export async function fetchKMMoviesDetails(url: string): Promise<Movie | null> {
-  try {
-    const data = await fetchWithTimeout('/api/kmmovies/details', `?url=${encodeURIComponent(url)}`);
-    if (!data?.data) return null;
 
-    const movie = data.data;
-    const downloads = movie.downloadLinks || movie.links || [];
 
-    return {
-      id: `kmmovies_detail_${Date.now()}`,
-      title: cleanTitle(movie.title || movie.name || 'Unknown'),
-      thumb: movie.imageUrl || movie.image || movie.poster || 'https://via.placeholder.com/800x450?text=No+Image',
-      url: url,
-      year: movie.movieInfo?.releaseDate || movie.releaseDate || movie.year || '2024',
-      rating: movie.movieInfo?.imdbRating || movie.imdbRating || 'N/A',
-      genre: movie.movieInfo?.genres || movie.genres || 'Movie',
-      desc: movie.storyline || movie.description || movie.plot || '',
-      downloads: downloads.map((d: DownloadLink) => ({ ...d, isMagicLink: true })),
-      source: 'kmmovies'
-    };
-  } catch (error) {
-    console.error('Error fetching KMMovies details:', error);
-    return null;
-  }
-}
-
-// Resolve magic link for KMMovies
-export async function resolveMagicLink(magicUrl: string): Promise<string | null> {
-  try {
-    const data = await fetchWithTimeout('/api/kmmovies/magiclinks', `?url=${encodeURIComponent(magicUrl)}`);
-    if (!data?.downloadLinks || data.downloadLinks.length === 0) return null;
-
-    // Get the first valid R2 link
-    const r2Link = data.downloadLinks.find((l: { url: string }) =>
-      l.url && (l.url.includes('r2.dev') || isDirectVideoUrl(l.url))
-    );
-
-    return r2Link?.url || null;
-  } catch (error) {
-    console.error('Error resolving magic link:', error);
-    return null;
-  }
-}
-
-// Fetch all movies in parallel (HDHub4U + KMMovies)
 export async function fetchAllMovies(page: number = 1): Promise<{
   hdhub4u: Movie[];
-  kmmovies: Movie[];
 }> {
-  const [hdhub4u, kmmovies] = await Promise.all([
-    fetchHDHub4U(page),
-    fetchKMMovies(page)
-  ]);
-
-  return { hdhub4u, kmmovies };
+  const hdhub4u = await fetchHDHub4U(page);
+  return { hdhub4u };
 }
 
-// Search all movies in parallel
 export async function searchAllMovies(query: string): Promise<{
   hdhub4u: Movie[];
-  kmmovies: Movie[];
 }> {
-  const [hdhub4u, kmmovies] = await Promise.all([
-    searchHDHub4U(query),
-    searchKMMovies(query)
-  ]);
-
-  return { hdhub4u, kmmovies };
+  const hdhub4u = await searchHDHub4U(query);
+  return { hdhub4u };
 }
 
 // Clear cache
