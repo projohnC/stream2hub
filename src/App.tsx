@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { MovieCard } from '@/components/MovieCard';
 import { MovieModal } from '@/components/MovieModal';
@@ -9,11 +10,15 @@ import { ShimmerRow } from '@/components/Shimmer';
 import { useMovies } from '@/hooks/useMovies';
 import { useWatchLater } from '@/hooks/useWatchLater';
 import { useToast } from '@/hooks/useToast';
+import { slugify } from '@/utils/slugify';
 import type { Movie, WatchLaterItem } from '@/types';
 import './App.css';
 
-function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'watchlater'>('home');
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { movieSlug } = useParams();
+
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -40,22 +45,65 @@ function App() {
 
   const { toasts, showToast, removeToast } = useToast();
 
-  // Load movies on mount
+  // Parse search query from URL
+  const searchQuery = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('q') || '';
+  }, [location.search]);
+
+  // Determine current view based on path
+  const currentView = useMemo(() => {
+    if (location.pathname === '/watchlater') return 'watchlater';
+    return 'home';
+  }, [location.pathname]);
+
+  // Load movies or search results based on URL
   useEffect(() => {
-    loadMovies(1);
-  }, [loadMovies]);
+    if (location.pathname === '/search') {
+      if (searchQuery) {
+        searchMovies(searchQuery);
+      }
+    } else if (location.pathname === '/' || movieSlug) {
+      loadMovies(1);
+    }
+  }, [location.pathname, searchQuery, movieSlug, searchMovies, loadMovies]);
+
+  // Handle movie Slug change (open modal if slug present)
+  useEffect(() => {
+    const findAndOpenMovie = async () => {
+      if (movieSlug) {
+        // Try to find in current movies list
+        let movie = movies.find(m => slugify(m.title) === movieSlug);
+
+        if (!movie) {
+          // If not in list, we might need a way to fetch by slug or wait for list
+          // For now, if we found it in the list, open it
+          if (movies.length > 0) {
+            // If movies are loaded and we still didn't find it, we might want to show error or just close
+          }
+          return;
+        }
+
+        setSelectedMovie(movie);
+        setIsModalOpen(true);
+
+        const details = await loadMovieDetails(movie);
+        if (details) {
+          setSelectedMovie(details);
+        }
+      } else {
+        setIsModalOpen(false);
+        setSelectedMovie(null);
+      }
+    };
+
+    findAndOpenMovie();
+  }, [movieSlug, movies, loadMovieDetails]);
 
   // Handle movie click
-  const handleMovieClick = useCallback(async (movie: Movie) => {
-    setSelectedMovie(movie);
-    setIsModalOpen(true);
-
-    // Load fresh details
-    const details = await loadMovieDetails(movie);
-    if (details) {
-      setSelectedMovie(details);
-    }
-  }, [loadMovieDetails]);
+  const handleMovieClick = useCallback((movie: Movie) => {
+    navigate(`/${slugify(movie.title)}`);
+  }, [navigate]);
 
   // Handle watch later toggle
   const handleToggleWatchLater = useCallback((movie: Movie) => {
@@ -68,7 +116,7 @@ function App() {
   }, [toggleWatchLater, isInWatchLater, showToast]);
 
   // Handle watch later item play
-  const handleWatchLaterPlay = useCallback(async (item: WatchLaterItem) => {
+  const handleWatchLaterPlay = useCallback((item: WatchLaterItem) => {
     const movie: Movie = {
       id: `watchlater_${item.url}`,
       title: item.title,
@@ -87,31 +135,38 @@ function App() {
 
   // Handle search
   const handleSearch = useCallback((query: string) => {
-    searchMovies(query);
-    showToast(`Searching for "${query}"...`, 'info');
-  }, [searchMovies, showToast]);
+    if (query.trim()) {
+      navigate(`/search?q=${encodeURIComponent(query)}`);
+    } else {
+      navigate('/');
+    }
+  }, [navigate]);
 
   // Handle view change
   const handleViewChange = useCallback((view: 'home' | 'watchlater') => {
-    setCurrentView(view);
+    if (view === 'watchlater') {
+      navigate('/watchlater');
+    } else {
+      navigate('/');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [navigate]);
 
   // Handle modal close
   const handleModalClose = useCallback(() => {
-    setIsModalOpen(false);
-    setSelectedMovie(null);
-  }, []);
+    navigate(location.pathname === '/search' ? `/search${location.search}` : '/');
+  }, [navigate, location.pathname, location.search]);
 
   // Helper for pagination numbers
   const renderPagination = () => {
     if (!hasMore && page === 1) return null;
+    if (location.pathname === '/search') return null; // No pagination for search
 
     const maxPagesToShow = 5;
     let startPage = Math.max(1, page - 2);
     let endPage = startPage + maxPagesToShow - 1;
 
-    if (endPage > 100) { // Arbitrary high limit for UI
+    if (endPage > 100) {
       endPage = 100;
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
@@ -163,11 +218,18 @@ function App() {
       />
 
       <main className="main-content">
-        {currentView === 'home' ? (
+        {currentView === 'home' || location.pathname === '/search' ? (
           <div className="home-view">
             <header className="view-header">
-              <h1 className="view-title">HDHub4U Movies</h1>
-              <p className="view-subtitle">Browse through the latest high-quality movies</p>
+              <h1 className="view-title">
+                {location.pathname === '/search' ? `Search results for "${searchQuery}"` : 'HDHub4U Movies'}
+              </h1>
+              <p className="view-subtitle">
+                {location.pathname === '/search'
+                  ? `Found ${movies.length} results`
+                  : 'Browse through the latest high-quality movies'
+                }
+              </p>
             </header>
 
             {loading && !movies.length ? (
@@ -230,6 +292,17 @@ function App() {
       {/* Full Page Loader */}
       <PageLoader visible={loading && !movies.length && currentView === 'home'} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<AppContent />} />
+      <Route path="/search" element={<AppContent />} />
+      <Route path="/watchlater" element={<AppContent />} />
+      <Route path="/:movieSlug" element={<AppContent />} />
+    </Routes>
   );
 }
 

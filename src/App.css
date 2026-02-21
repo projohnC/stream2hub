@@ -1926,3 +1926,294 @@ body {
     display: none;
   }
 }
+
+/* Movie Page Styles */
+.movie-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding-bottom: 80px;
+}
+
+.movie-page-header {
+  padding: 80px 48px 20px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.back-btn:hover {
+  color: white;
+}
+
+.movie-page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 48px;
+}
+
+.movie-hero-section {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 48px;
+  margin-bottom: 60px;
+}
+
+.movie-poster {
+  position: relative;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  aspect-ratio: 2/3;
+}
+
+.movie-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.movie-info-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.movie-title {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  line-height: 1.1;
+}
+
+.movie-meta-pills {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.pill.rating {
+  color: var(--yellow-primary);
+  border-color: rgba(234, 179, 8, 0.3);
+}
+
+.movie-description {
+  font-size: 18px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.movie-main-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.external-players {
+  display: flex;
+  gap: 12px;
+}
+
+.movie-player-container {
+  margin-bottom: 60px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  border: 1px solid var(--border-color);
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: black;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.main-video {
+  width: 100%;
+  height: 100%;
+}
+
+.player-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.server-list h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.server-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.server-btn {
+  padding: 10px 20px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.server-btn:hover {
+  background: var(--border-color);
+  color: white;
+}
+
+.server-btn.active {
+  background: var(--red-primary);
+  color: white;
+  border-color: var(--red-primary);
+  box-shadow: 0 0 15px rgba(220, 38, 38, 0.3);
+}
+
+.movie-downloads-section {
+  padding-top: 40px;
+  border-top: 1px solid var(--border-color);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+  margin-bottom: 32px;
+}
+
+.downloads-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.download-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.download-card:hover {
+  border-color: var(--green-primary);
+  transform: translateY(-4px);
+}
+
+.download-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.download-card-info .quality {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+
+.download-card-info .size {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.movie-page-loading {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  color: var(--text-secondary);
+}
+
+.movie-page-error {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .movie-hero-section {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .movie-poster {
+    max-width: 250px;
+    margin: 0 auto;
+  }
+
+  .movie-info-summary {
+    align-items: center;
+  }
+
+  .movie-meta-pills,
+  .movie-main-actions {
+    justify-content: center;
+  }
+
+  .movie-title {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 600px) {
+  .movie-page-header {
+    padding: 80px 20px 20px;
+  }
+
+  .movie-page-content {
+    padding: 0 20px;
+  }
+
+  .movie-title {
+    font-size: 28px;
+  }
+
+  .movie-player-container {
+    padding: 16px;
+  }
+}
