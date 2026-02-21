@@ -20,14 +20,17 @@ export const WatchLaterView: React.FC<WatchLaterViewProps> = ({
   if (items.length === 0) {
     return (
       <div className="watch-later-view">
-        <div className="watch-later-header">
+        <div className="back-btn-container">
           <button className="back-btn" onClick={onBack}>
             <ArrowLeft size={20} />
-            Back
+            <span>Back to Home</span>
           </button>
+        </div>
+
+        <div className="watch-later-header">
           <h1>Watch Later</h1>
         </div>
-        
+
         <div className="empty-state">
           <div className="empty-icon">
             <Clock size={64} />
@@ -44,32 +47,35 @@ export const WatchLaterView: React.FC<WatchLaterViewProps> = ({
 
   return (
     <div className="watch-later-view">
-      <div className="watch-later-header">
+      <div className="back-btn-container">
         <button className="back-btn" onClick={onBack}>
           <ArrowLeft size={20} />
-          Back
+          <span>Back to Home</span>
         </button>
+      </div>
+
+      <div className="watch-later-header">
         <h1>Watch Later</h1>
         <span className="item-count">{items.length} {items.length === 1 ? 'movie' : 'movies'}</span>
       </div>
-      
+
       <div className="watch-later-actions">
         <button className="btn btn-outline btn-small" onClick={onClear}>
           <Trash2 size={16} />
           Clear All
         </button>
       </div>
-      
+
       <div className="watch-later-grid">
         {items.map(item => (
-          <div 
-            key={item.url} 
+          <div
+            key={item.url}
             className="watch-later-card"
             onClick={() => onPlay(item)}
           >
             <div className="watch-later-thumb">
-              <img 
-                src={item.thumb} 
+              <img
+                src={item.thumb}
                 alt={item.title}
                 loading="lazy"
                 onError={(e) => {
@@ -83,7 +89,7 @@ export const WatchLaterView: React.FC<WatchLaterViewProps> = ({
                 {item.source === 'hdhub4u' ? 'HD' : 'KM'}
               </div>
             </div>
-            
+
             <div className="watch-later-info">
               <h3 className="watch-later-title" title={item.title}>
                 {item.title}
@@ -92,8 +98,8 @@ export const WatchLaterView: React.FC<WatchLaterViewProps> = ({
                 {item.year} • {item.rating}
               </p>
             </div>
-            
-            <button 
+
+            <button
               className="remove-btn"
               onClick={(e) => {
                 e.stopPropagation();

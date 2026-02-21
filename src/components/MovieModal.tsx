@@ -156,15 +156,16 @@ export const MovieModal: React.FC<MovieModalProps> = ({
       window.location.href = intent;
     } else {
       // Desktop - vlc:// protocol needs special care for encoded URLs
-      // Avoid browser normalizing the double slash into one
       const vlcUrl = url.replace('https://', 'https/').replace('http://', 'http/');
       window.location.href = `vlc://${vlcUrl}`;
-    }
 
-    // Fallback if intent/protocol fails
-    setTimeout(() => {
-      window.open(url, '_blank');
-    }, 2000);
+      // Only fallback on desktop where vlc:// might not be registered
+      setTimeout(() => {
+        if (!isAndroid) {
+          window.open(url, '_blank');
+        }
+      }, 2000);
+    }
   };
 
   // Try next link
@@ -285,17 +286,17 @@ export const MovieModal: React.FC<MovieModalProps> = ({
               Watch Online
             </button>
 
-            <div className="external-players-group">
-              <button
-                className="btn btn-secondary"
-                onClick={() => playExternal('vlc')}
-                disabled={validLinks.length === 0}
-              >
-                <Monitor size={18} />
-                {/Android/i.test(navigator.userAgent) ? 'VLC' : 'Open in VLC'}
-              </button>
+            {/Android/i.test(navigator.userAgent) && (
+              <div className="external-players-group">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => playExternal('vlc')}
+                  disabled={validLinks.length === 0}
+                >
+                  <Monitor size={18} />
+                  VLC
+                </button>
 
-              {/Android/i.test(navigator.userAgent) && (
                 <button
                   className="btn btn-secondary"
                   onClick={() => playExternal('mx')}
@@ -304,8 +305,8 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                   <Monitor size={18} />
                   MX Player
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Download Section */}
@@ -335,18 +336,18 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                     </div>
 
                     <div className="download-actions">
-                      <div className="player-badges">
-                        <button
-                          className="btn btn-vlc"
-                          title="Play in VLC"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            playExternal('vlc', index);
-                          }}
-                        >
-                          VLC
-                        </button>
-                        {/Android/i.test(navigator.userAgent) && (
+                      {/Android/i.test(navigator.userAgent) && (
+                        <div className="player-badges">
+                          <button
+                            className="btn btn-vlc"
+                            title="Play in VLC"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playExternal('vlc', index);
+                            }}
+                          >
+                            VLC
+                          </button>
                           <button
                             className="btn btn-vlc"
                             title="Play in MX Player"
@@ -357,8 +358,8 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                           >
                             MX
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <button
                         className="btn btn-download"
                         onClick={(e) => {

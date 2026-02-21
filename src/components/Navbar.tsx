@@ -8,11 +8,11 @@ interface NavbarProps {
   watchLaterCount: number;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ 
-  currentView, 
-  onViewChange, 
+export const Navbar: React.FC<NavbarProps> = ({
+  currentView,
+  onViewChange,
   onSearch,
-  watchLaterCount 
+  watchLaterCount
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -43,17 +43,17 @@ export const Navbar: React.FC<NavbarProps> = ({
     <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
       <div className="nav-container">
         <div className="nav-left">
-          <button 
+          <button
             className="menu-btn"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
-          
-          <a 
-            className="logo" 
-            href="#" 
+
+          <a
+            className="logo"
+            href="#"
             onClick={(e) => { e.preventDefault(); onViewChange('home'); }}
           >
             <div className="logo-icon">
@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <span className="logo-text">StreamHub</span>
           </a>
-          
+
           <div className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
             {navLinks.map(link => (
               <button
@@ -80,9 +80,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             ))}
           </div>
         </div>
-        
+
         <div className="nav-right">
-          <button 
+          <button
             className="watch-later-nav-btn"
             onClick={() => onViewChange('watchlater')}
             aria-label="Watch Later"
@@ -92,9 +92,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="badge-count">{watchLaterCount}</span>
             )}
           </button>
-          
+
           <form className="search-box" onSubmit={handleSearch}>
-            <Search size={18} className="search-icon" />
+            <button type="submit" className="search-submit-btn">
+              <Search size={18} />
+            </button>
             <input
               type="text"
               placeholder="Search movies..."
@@ -104,10 +106,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </form>
         </div>
       </div>
-      
+
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="mobile-menu-overlay"
           onClick={() => setIsMobileMenuOpen(false)}
         />
