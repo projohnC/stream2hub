@@ -1,5 +1,5 @@
 // API Service with caching, timeout, and parallel fetching
-import type { Movie, DownloadLink, HDHub4UMovie } from '@/types';
+import type { Movie, DownloadLink, HDHub4UMovie, DesireMoviesMovie } from '@/types';
 
 export type { Movie, DownloadLink } from '@/types';
 
@@ -227,6 +227,24 @@ function mapHDHub4UMovie(m: HDHub4UMovie, index: number): Movie {
   };
 }
 
+function mapDesireMovie(m: DesireMoviesMovie, index: number): Movie {
+  const downloads = m.downloadLinks || m.links || [];
+
+  return {
+    id: m.id || `desire_${index}_${Date.now()}`,
+    title: cleanTitle(m.title || m.name || 'Unknown'),
+    thumb: m.imageUrl || m.image || m.poster || 'https://via.placeholder.com/800x450?text=No+Image',
+    url: m.url || m.link || '#',
+    year: m.year || m.releaseDate || '2024',
+    rating: m.imdbRating || 'N/A',
+    genre: m.genre || m.genres || 'Movie',
+    desc: m.description || m.storyline || m.plot || '',
+    downloads,
+    source: 'desiremovies',
+    quality: m.quality
+  };
+}
+
 
 
 // Fetch HDHub4U movies
@@ -288,22 +306,64 @@ export async function fetchHDHub4UDetails(url: string): Promise<Movie | null> {
   }
 }
 
+export async function fetchDesireMovies(page: number = 1): Promise<Movie[]> {
+  try {
+    const data = await fetchWithTimeout('/api/desiremovies', `?page=${page}`);
+    const movies = extractArrayFromResponse(data);
+    return movies.map((m: DesireMoviesMovie, i: number) => mapDesireMovie(m, i));
+  } catch (error) {
+    console.error('Error fetching DesireMovies:', error);
+    return [];
+  }
+}
+
+export async function searchDesireMovies(query: string): Promise<Movie[]> {
+  try {
+    const data = await fetchWithTimeout('/api/desiremovies/search', `?q=${encodeURIComponent(query)}`);
+    const resultMovies = Array.isArray(data?.results)
+      ? data.results
+      : extractArrayFromResponse(data);
+    return resultMovies.map((m: DesireMoviesMovie, i: number) => mapDesireMovie(m, i));
+  } catch (error) {
+    console.error('Error searching DesireMovies:', error);
+    return [];
+  }
+}
+
+export async function fetchDesireMovieDetails(url: string): Promise<Movie | null> {
+  try {
+    const data = await fetchWithTimeout('/api/desiremovies/details', `?url=${encodeURIComponent(url)}`);
+    const movie = data?.data || data;
+
+    if (!movie || typeof movie !== 'object') return null;
+
+    return mapDesireMovie(movie as DesireMoviesMovie, 0);
+  } catch (error) {
+    console.error('Error fetching DesireMovies details:', error);
+    return null;
+  }
+}
+
 
 
 
 
 export async function fetchAllMovies(page: number = 1): Promise<{
   hdhub4u: Movie[];
+  desiremovies: Movie[];
 }> {
   const hdhub4u = await fetchHDHub4U(page);
-  return { hdhub4u };
+  const desiremovies = await fetchDesireMovies(page);
+  return { hdhub4u, desiremovies };
 }
 
 export async function searchAllMovies(query: string): Promise<{
   hdhub4u: Movie[];
+  desiremovies: Movie[];
 }> {
   const hdhub4u = await searchHDHub4U(query);
-  return { hdhub4u };
+  const desiremovies = await searchDesireMovies(query);
+  return { hdhub4u, desiremovies };
 }
 
 // Clear cache

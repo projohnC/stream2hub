@@ -15,6 +15,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   onClick, 
   onToggleWatchLater 
 }) => {
+  const sourceBadge = movie.source === 'hdhub4u' ? 'HD' : 'DM';
+
   return (
     <div className="video-card" onClick={onClick}>
       <div className="video-thumb">
@@ -48,7 +50,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       
       <div className="video-info">
         <div className="channel-avatar">
-          {movie.source === 'hdhub4u' ? 'HD' : 'KM'}
+          {sourceBadge}
         </div>
         <div className="video-details">
           <h3 className="video-title" title={movie.title}>

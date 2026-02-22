@@ -28,6 +28,8 @@ function AppContent() {
     error,
     page,
     hasMore,
+    provider,
+    setProvider,
     loadMovies,
     searchMovies,
     loadMovieDetails,
@@ -57,6 +59,8 @@ function AppContent() {
     return 'home';
   }, [location.pathname]);
 
+  const providerName = provider === 'hdhub4u' ? 'HDHub4U' : 'DesireMovies';
+
   // Load movies or search results based on URL
   useEffect(() => {
     if (location.pathname === '/search') {
@@ -66,14 +70,14 @@ function AppContent() {
     } else if (location.pathname === '/' || movieSlug) {
       loadMovies(1);
     }
-  }, [location.pathname, searchQuery, movieSlug, searchMovies, loadMovies]);
+  }, [location.pathname, searchQuery, movieSlug, searchMovies, loadMovies, provider]);
 
   // Handle movie Slug change (open modal if slug present)
   useEffect(() => {
     const findAndOpenMovie = async () => {
       if (movieSlug) {
         // Try to find in current movies list
-        let movie = movies.find(m => slugify(m.title) === movieSlug);
+        const movie = movies.find(m => slugify(m.title) === movieSlug);
 
         if (!movie) {
           // If not in list, we might need a way to fetch by slug or wait for list
@@ -221,13 +225,29 @@ function AppContent() {
         {currentView === 'home' || location.pathname === '/search' ? (
           <div className="home-view">
             <header className="view-header">
+              <div className="provider-switch" role="tablist" aria-label="Select movie provider">
+                <button
+                  className={`provider-btn ${provider === 'hdhub4u' ? 'active' : ''}`}
+                  onClick={() => setProvider('hdhub4u')}
+                >
+                  HDHub4U
+                </button>
+                <button
+                  className={`provider-btn ${provider === 'desiremovies' ? 'active' : ''}`}
+                  onClick={() => setProvider('desiremovies')}
+                >
+                  DesireMovies
+                </button>
+              </div>
               <h1 className="view-title">
-                {location.pathname === '/search' ? `Search results for "${searchQuery}"` : 'HDHub4U Movies'}
+                {location.pathname === '/search'
+                  ? `${providerName} results for "${searchQuery}"`
+                  : `${providerName} Movies`}
               </h1>
               <p className="view-subtitle">
                 {location.pathname === '/search'
                   ? `Found ${movies.length} results`
-                  : 'Browse through the latest high-quality movies'
+                  : `Browse latest movies from ${providerName}`
                 }
               </p>
             </header>
