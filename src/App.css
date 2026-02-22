@@ -1594,6 +1594,41 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
+.provider-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+}
+
+.provider-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.provider-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.provider-btn.active {
+  color: white;
+  background: var(--red-primary);
+  box-shadow: 0 0 16px rgba(220, 38, 38, 0.35);
+}
+
 .view-subtitle {
   color: var(--text-secondary);
   font-size: 18px;

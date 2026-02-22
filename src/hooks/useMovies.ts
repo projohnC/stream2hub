@@ -3,8 +3,13 @@ import {
   fetchHDHub4U,
   searchHDHub4U,
   fetchHDHub4UDetails,
+  fetchDesireMovies,
+  searchDesireMovies,
+  fetchDesireMovieDetails,
   type Movie
 } from '@/services/api';
+
+export type Provider = 'hdhub4u' | 'desiremovies';
 
 interface UseMoviesReturn {
   movies: Movie[];
@@ -12,6 +17,8 @@ interface UseMoviesReturn {
   error: string | null;
   page: number;
   hasMore: boolean;
+  provider: Provider;
+  setProvider: (provider: Provider) => void;
   loadMovies: (pageNum?: number) => Promise<void>;
   searchMovies: (query: string) => Promise<void>;
   loadMovieDetails: (movie: Movie) => Promise<Movie | null>;
@@ -24,6 +31,7 @@ export function useMovies(): UseMoviesReturn {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [provider, setProvider] = useState<Provider>('hdhub4u');
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const loadMovies = useCallback(async (pageNum: number = 1) => {
@@ -37,15 +45,17 @@ export function useMovies(): UseMoviesReturn {
     setError(null);
 
     try {
-      const hdhub4u = await fetchHDHub4U(pageNum);
+      const fetchedMovies = provider === 'hdhub4u'
+        ? await fetchHDHub4U(pageNum)
+        : await fetchDesireMovies(pageNum);
 
-      if (hdhub4u.length === 0 && pageNum === 1) {
+      if (fetchedMovies.length === 0 && pageNum === 1) {
         setError('No movies found. The servers might be busy, please try again later.');
         setHasMore(false);
       } else {
-        setMovies(hdhub4u);
+        setMovies(fetchedMovies);
         setPage(pageNum);
-        setHasMore(hdhub4u.length >= 10);
+        setHasMore(fetchedMovies.length >= 10);
       }
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -58,7 +68,7 @@ export function useMovies(): UseMoviesReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [provider]);
 
   const searchMovies = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -76,8 +86,10 @@ export function useMovies(): UseMoviesReturn {
     setError(null);
 
     try {
-      const hdhub4u = await searchHDHub4U(query);
-      setMovies(hdhub4u);
+      const searchedMovies = provider === 'hdhub4u'
+        ? await searchHDHub4U(query)
+        : await searchDesireMovies(query);
+      setMovies(searchedMovies);
       setHasMore(false);
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -86,11 +98,13 @@ export function useMovies(): UseMoviesReturn {
     } finally {
       setLoading(false);
     }
-  }, [loadMovies]);
+  }, [loadMovies, provider]);
 
   const loadMovieDetails = useCallback(async (movie: Movie): Promise<Movie | null> => {
     try {
-      const details = await fetchHDHub4UDetails(movie.url);
+      const details = movie.source === 'hdhub4u'
+        ? await fetchHDHub4UDetails(movie.url)
+        : await fetchDesireMovieDetails(movie.url);
       if (!details) return null;
 
       // Merge listing data with details, but prioritize listing data for title/id
@@ -132,6 +146,8 @@ export function useMovies(): UseMoviesReturn {
     error,
     page,
     hasMore,
+    provider,
+    setProvider,
     loadMovies,
     searchMovies,
     loadMovieDetails,

@@ -19,6 +19,8 @@ export const Hero: React.FC<HeroProps> = ({
 }) => {
   if (!movie) return null;
 
+  const sourceName = movie.source === 'hdhub4u' ? 'HDHub4U' : 'DesireMovies';
+
   return (
     <div className="hero">
       <div className="hero-bg">
@@ -35,7 +37,7 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="hero-content">
         <div className="hero-inner">
           <div className="hero-badges">
-            <span className="badge">{movie.source === 'hdhub4u' ? 'HDHub4U' : 'KMMovies'}</span>
+            <span className="badge">{sourceName}</span>
             {movie.downloads[0]?.quality && (
               <span className="badge quality">{movie.downloads[0].quality}</span>
             )}
