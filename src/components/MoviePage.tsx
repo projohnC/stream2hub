@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ArrowLeft, Play, Download, Monitor, SkipForward, Loader2, Calendar, Star, Tag } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Hls from 'hls.js';
 import { useMovies } from '@/hooks/useMovies';
@@ -322,6 +323,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ onShowToast }) => {
         </div>
     );
 };
+
 
 
 
