@@ -131,7 +131,24 @@ export const MovieModal: React.FC<MovieModalProps> = ({
 
   if (!isOpen || !movie) return null;
 
-  const validLinks = movie.downloads;
+  const extractEpisodeNumber = (text: string) => {
+    const episodeMatch = text.match(/(?:episode|ep)\s*(\d+)/i);
+    return episodeMatch ? Number(episodeMatch[1]) : null;
+  };
+
+  const sortedLinks = [...movie.downloads].sort((a, b) => {
+    const aText = `${a.quality || ''} ${a.badge || ''}`;
+    const bText = `${b.quality || ''} ${b.badge || ''}`;
+    const aEpisode = extractEpisodeNumber(aText);
+    const bEpisode = extractEpisodeNumber(bText);
+
+    if (aEpisode !== null && bEpisode !== null) return aEpisode - bEpisode;
+    if (aEpisode !== null) return -1;
+    if (bEpisode !== null) return 1;
+    return aText.localeCompare(bText, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  const validLinks = sortedLinks;
 
   const watchOnline = () => {
     if (validLinks.length === 0) return;
@@ -140,7 +157,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
     setIsPlaying(true);
   };
 
-  const playExternal = (player: 'vlc' | 'mx' | 'other' = 'vlc', index?: number) => {
+  const playExternal = (player: 'vlc' | 'other' = 'vlc', index?: number) => {
     if (validLinks.length === 0) return;
     const targetIndex = typeof index === 'number' ? index : currentLinkIndex;
     const url = validLinks[targetIndex].url;
@@ -150,8 +167,6 @@ export const MovieModal: React.FC<MovieModalProps> = ({
       let intent = '';
       if (player === 'vlc') {
         intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=org.videolan.vlc;end`;
-      } else if (player === 'mx') {
-        intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;end`;
       } else {
         intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;end`;
       }
@@ -282,14 +297,6 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                   VLC
                 </button>
 
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => playExternal('mx')}
-                  disabled={validLinks.length === 0}
-                >
-                  <Monitor size={18} />
-                  MX Player
-                </button>
               </div>
             )}
           </div>
@@ -340,20 +347,10 @@ export const MovieModal: React.FC<MovieModalProps> = ({
                           >
                             VLC
                           </button>
-                          <button
-                            className="btn btn-mx"
-                            title="Play in MX Player"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              playExternal('mx', index);
-                            }}
-                          >
-                            MX
-                          </button>
                         </div>
                       )}
                       <button
-                        className="btn btn-download"
+                        className="btn btn-download centered-download-btn"
                         onClick={(e) => {
                           e.stopPropagation();
                           setCurrentLinkIndex(index);
