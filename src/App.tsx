@@ -17,7 +17,7 @@ import './App.css';
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { movieSlug } = useParams();
+  const { movieSlug, searchSlug } = useParams();
 
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,15 +47,15 @@ function AppContent() {
 
   const { toasts, showToast, removeToast } = useToast();
 
-  // Parse search query from URL
+  // Parse search query from URL params
   const searchQuery = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return params.get('q') || '';
-  }, [location.search]);
+    return decodeURIComponent(searchSlug || '').replace(/-/g, ' ').trim();
+  }, [searchSlug]);
 
   // Determine current view based on path
   const currentView = useMemo(() => {
-    if (location.pathname === '/watchlater') return 'watchlater';
+    if (location.pathname.startsWith('/watchlater')) return 'watchlater';
+    if (location.pathname.startsWith('/search')) return 'search';
     return 'home';
   }, [location.pathname]);
 
@@ -63,11 +63,13 @@ function AppContent() {
 
   // Load movies or search results based on URL
   useEffect(() => {
-    if (location.pathname === '/search') {
+    if (location.pathname.startsWith('/search')) {
       if (searchQuery) {
         searchMovies(searchQuery);
+      } else {
+        loadMovies(1);
       }
-    } else if (location.pathname === '/' || movieSlug) {
+    } else if (location.pathname === '/' || location.pathname === '/home' || movieSlug) {
       loadMovies(1);
     }
   }, [location.pathname, searchQuery, movieSlug, searchMovies, loadMovies, provider]);
@@ -106,8 +108,10 @@ function AppContent() {
 
   // Handle movie click
   const handleMovieClick = useCallback((movie: Movie) => {
-    navigate(`/${slugify(movie.title)}`);
-  }, [navigate]);
+    navigate(`/movie/${slugify(movie.title)}`, {
+      state: { from: location.pathname }
+    });
+  }, [navigate, location.pathname]);
 
   // Handle watch later toggle
   const handleToggleWatchLater = useCallback((movie: Movie) => {
@@ -140,31 +144,35 @@ function AppContent() {
   // Handle search
   const handleSearch = useCallback((query: string) => {
     if (query.trim()) {
-      navigate(`/search?q=${encodeURIComponent(query)}`);
+      navigate(`/search/${slugify(query)}`);
     } else {
-      navigate('/');
+      navigate('/search');
     }
   }, [navigate]);
 
   // Handle view change
-  const handleViewChange = useCallback((view: 'home' | 'watchlater') => {
+  const handleViewChange = useCallback((view: 'home' | 'search' | 'watchlater') => {
     if (view === 'watchlater') {
       navigate('/watchlater');
+    } else if (view === 'search') {
+      navigate('/search');
     } else {
-      navigate('/');
+      navigate('/home');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [navigate]);
 
   // Handle modal close
   const handleModalClose = useCallback(() => {
-    navigate(location.pathname === '/search' ? `/search${location.search}` : '/');
-  }, [navigate, location.pathname, location.search]);
+    const fallbackRoute = currentView === 'search' ? '/search' : '/home';
+    const fromPath = (location.state as { from?: string } | null)?.from;
+    navigate(fromPath || fallbackRoute);
+  }, [navigate, location.state, currentView]);
 
   // Helper for pagination numbers
   const renderPagination = () => {
     if (!hasMore && page === 1) return null;
-    if (location.pathname === '/search') return null; // No pagination for search
+    if (location.pathname.startsWith('/search')) return null; // No pagination for search
 
     const maxPagesToShow = 5;
     let startPage = Math.max(1, page - 2);
@@ -222,7 +230,7 @@ function AppContent() {
       />
 
       <main className="main-content">
-        {currentView === 'home' || location.pathname === '/search' ? (
+        {currentView !== 'watchlater' ? (
           <div className="home-view">
             <header className="view-header">
               <div className="provider-switch" role="tablist" aria-label="Select movie provider">
@@ -240,12 +248,12 @@ function AppContent() {
                 </button>
               </div>
               <h1 className="view-title">
-                {location.pathname === '/search'
+                {location.pathname.startsWith('/search')
                   ? `${providerName} results for "${searchQuery}"`
                   : `${providerName} Movies`}
               </h1>
               <p className="view-subtitle">
-                {location.pathname === '/search'
+                {location.pathname.startsWith('/search')
                   ? `Found ${movies.length} results`
                   : `Browse latest movies from ${providerName}`
                 }
@@ -319,9 +327,11 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<AppContent />} />
+      <Route path="/home" element={<AppContent />} />
       <Route path="/search" element={<AppContent />} />
+      <Route path="/search/:searchSlug" element={<AppContent />} />
       <Route path="/watchlater" element={<AppContent />} />
-      <Route path="/:movieSlug" element={<AppContent />} />
+      <Route path="/movie/:movieSlug" element={<AppContent />} />
     </Routes>
   );
 }

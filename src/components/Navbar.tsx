@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Search, Clock, Home, Film, Bookmark } from 'lucide-react';
 
 interface NavbarProps {
-  currentView: 'home' | 'watchlater';
-  onViewChange: (view: 'home' | 'watchlater') => void;
+  currentView: 'home' | 'search' | 'watchlater';
+  onViewChange: (view: 'home' | 'search' | 'watchlater') => void;
   onSearch: (query: string) => void;
   watchLaterCount: number;
 }
@@ -35,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = [
     { id: 'home', label: 'Home', icon: Home, view: 'home' as const },
-    { id: 'movies', label: 'Movies', icon: Film, view: 'home' as const },
+    { id: 'search', label: 'Search', icon: Film, view: 'search' as const },
     { id: 'watchlater', label: 'Watch Later', icon: Bookmark, view: 'watchlater' as const },
   ];
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Play, Download, Monitor, SkipForward, Loader2, Calendar, Star, Tag } from 'lucide-react';
+import { ArrowLeft, Play, Download, Loader2, Calendar, Star, Tag } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Hls from 'hls.js';
 import { useMovies } from '@/hooks/useMovies';
@@ -163,7 +163,7 @@ export const MoviePage: React.FC<MoviePageProps> = ({ onShowToast }) => {
         setIsPlaying(true);
     };
 
-    const playExternal = (player: 'vlc' | 'mx' | 'other' = 'vlc', index?: number) => {
+    const playExternal = (player: 'vlc' | 'other' = 'vlc', index?: number) => {
         if (validLinks.length === 0) return;
         const targetIndex = typeof index === 'number' ? index : currentLinkIndex;
         const url = validLinks[targetIndex].url;
@@ -173,8 +173,6 @@ export const MoviePage: React.FC<MoviePageProps> = ({ onShowToast }) => {
             let intent = '';
             if (player === 'vlc') {
                 intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=org.videolan.vlc;end`;
-            } else if (player === 'mx') {
-                intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;package=com.mxtech.videoplayer.ad;end`;
             } else {
                 intent = `intent:${url}#Intent;action=android.intent.action.VIEW;type=video/*;end`;
             }
@@ -230,7 +228,6 @@ export const MoviePage: React.FC<MoviePageProps> = ({ onShowToast }) => {
                             {/Android/i.test(navigator.userAgent) && (
                                 <div className="external-players">
                                     <button className="btn btn-secondary" onClick={() => playExternal('vlc')}>VLC</button>
-                                    <button className="btn btn-secondary" onClick={() => playExternal('mx')}>MX Player</button>
                                 </div>
                             )}
                         </div>
