@@ -1,15 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  fetchHDHub4U,
-  searchHDHub4U,
-  fetchHDHub4UDetails,
   fetchDesireMovies,
   searchDesireMovies,
   fetchDesireMovieDetails,
   type Movie
 } from '@/services/api';
 
-export type Provider = 'hdhub4u' | 'desiremovies';
+export type Provider = 'desiremovies';
 
 interface UseMoviesReturn {
   movies: Movie[];
@@ -31,11 +28,10 @@ export function useMovies(): UseMoviesReturn {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [provider, setProvider] = useState<Provider>('hdhub4u');
+  const [provider, setProvider] = useState<Provider>('desiremovies');
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const loadMovies = useCallback(async (pageNum: number = 1) => {
-    // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -45,9 +41,7 @@ export function useMovies(): UseMoviesReturn {
     setError(null);
 
     try {
-      const fetchedMovies = provider === 'hdhub4u'
-        ? await fetchHDHub4U(pageNum)
-        : await fetchDesireMovies(pageNum);
+      const fetchedMovies = await fetchDesireMovies(pageNum);
 
       if (fetchedMovies.length === 0 && pageNum === 1) {
         setError('No movies found. The servers might be busy, please try again later.');
@@ -68,7 +62,7 @@ export function useMovies(): UseMoviesReturn {
     } finally {
       setLoading(false);
     }
-  }, [provider]);
+  }, []);
 
   const searchMovies = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -76,7 +70,6 @@ export function useMovies(): UseMoviesReturn {
       return;
     }
 
-    // Cancel previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -86,9 +79,7 @@ export function useMovies(): UseMoviesReturn {
     setError(null);
 
     try {
-      const searchedMovies = provider === 'hdhub4u'
-        ? await searchHDHub4U(query)
-        : await searchDesireMovies(query);
+      const searchedMovies = await searchDesireMovies(query);
       setMovies(searchedMovies);
       setHasMore(false);
     } catch (err) {
@@ -98,20 +89,16 @@ export function useMovies(): UseMoviesReturn {
     } finally {
       setLoading(false);
     }
-  }, [loadMovies, provider]);
+  }, [loadMovies]);
 
   const loadMovieDetails = useCallback(async (movie: Movie): Promise<Movie | null> => {
     try {
-      const details = movie.source === 'hdhub4u'
-        ? await fetchHDHub4UDetails(movie.url)
-        : await fetchDesireMovieDetails(movie.url);
+      const details = await fetchDesireMovieDetails(movie.url);
       if (!details) return null;
 
-      // Merge listing data with details, but prioritize listing data for title/id
-      // to ensure consistency and prevent "Unknown" titles
       return {
         ...details,
-        id: movie.id, // Keep the same ID
+        id: movie.id,
         title: (details.title && details.title !== 'Unknown') ? details.title : movie.title,
         thumb: (details.thumb && !details.thumb.includes('placeholder')) ? details.thumb : movie.thumb,
         year: (details.year && details.year !== '2024') ? details.year : movie.year,
@@ -131,7 +118,6 @@ export function useMovies(): UseMoviesReturn {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [page, loadMovies]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {

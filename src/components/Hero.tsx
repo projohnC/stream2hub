@@ -19,7 +19,7 @@ export const Hero: React.FC<HeroProps> = ({
 }) => {
   if (!movie) return null;
 
-  const sourceName = movie.source === 'hdhub4u' ? 'HDHub4U' : 'DesireMovies';
+  const sourceName = 'DesireMovies';
 
   return (
     <div className="hero">
