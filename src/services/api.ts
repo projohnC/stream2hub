@@ -4,8 +4,8 @@ import type { Movie, DownloadLink, DesireMoviesMovie } from '@/types';
 export type { Movie, DownloadLink } from '@/types';
 
 const CONFIG = {
-  baseUrl: import.meta.env.VITE_API_BASE_URL || 'https://scarperapi-8lk0.onrender.com',
-  apiKey: import.meta.env.VITE_API_KEY || 'sk_Np9lerLj76MiTGBXm1nL-kr4HVeGKPMb',
+  baseUrl: 'https://scarperapi-8lk0.onrender.com',
+  apiKey: 'sk_Wv4v8TwKE4muWoxW-2UD8zG0CW_CLT6z',
   timeout: 15000
 };
 
