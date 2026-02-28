@@ -212,7 +212,7 @@ export const MovieModal: React.FC<MovieModalProps> = ({
             <span className="meta-rating">IMDb: {movie.rating}</span>
             <span className="meta-year">{movie.year}</span>
             <span className="meta-genre">{movie.genre}</span>
-            <span className="meta-source">HDHub4U</span>
+            <span className="meta-source">DesireMovies</span>
           </div>
 
           <p className="modal-desc">

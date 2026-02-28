@@ -15,7 +15,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
   onClick, 
   onToggleWatchLater 
 }) => {
-  const sourceBadge = movie.source === 'hdhub4u' ? 'HD' : 'DM';
+  const sourceBadge = 'DM';
 
   return (
     <div className="video-card" onClick={onClick}>
