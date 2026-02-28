@@ -10,7 +10,7 @@ export interface Movie {
   genre: string;
   desc: string;
   downloads: DownloadLink[];
-  source: 'hdhub4u' | 'desiremovies';
+  source: 'desiremovies';
   quality?: string;
   badge?: string;
 }
@@ -39,37 +39,12 @@ export interface WatchLaterItem {
   thumb: string;
   year: string;
   rating: string;
-  source: 'hdhub4u' | 'desiremovies';
+  source: 'desiremovies';
 }
 
 export interface APIResponse<T> {
   data?: T;
   error?: string;
-}
-
-export interface HDHub4UMovie {
-  title?: string;
-  name?: string;
-  imageUrl?: string;
-  image?: string;
-  poster?: string;
-  url?: string;
-  link?: string;
-  movieInfo?: {
-    releaseDate?: string;
-    imdbRating?: string;
-    genres?: string;
-
-  };
-  releaseDate?: string;
-  year?: string;
-  imdbRating?: string;
-  genres?: string;
-  storyline?: string;
-  description?: string;
-  plot?: string;
-  downloadLinks?: DownloadLink[];
-  links?: DownloadLink[];
 }
 
 export interface DesireMoviesMovie {
@@ -93,4 +68,3 @@ export interface DesireMoviesMovie {
   downloadLinks?: DownloadLink[];
   links?: DownloadLink[];
 }
-

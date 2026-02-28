@@ -17,7 +17,7 @@ export const WatchLaterView: React.FC<WatchLaterViewProps> = ({
   onRemove,
   onClear
 }) => {
-  const getSourceBadge = (source: WatchLaterItem['source']) => source === 'hdhub4u' ? 'HD' : 'DM';
+  const getSourceBadge = () => 'DM';
 
   if (items.length === 0) {
     return (
@@ -88,7 +88,7 @@ export const WatchLaterView: React.FC<WatchLaterViewProps> = ({
                 <Play size={32} fill="white" />
               </div>
               <div className="source-badge">
-                {getSourceBadge(item.source)}
+                {getSourceBadge()}
               </div>
             </div>
 
